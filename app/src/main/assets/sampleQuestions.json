@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "question": "Which of the following is the preferred language in the Android development environment?",
+    "type": "single",
+    "answers": ["Swift", "Kotlin", "Objective C", "Java"]
+  },
+  {
+    "id": 2,
+    "question": "Android Studio is the official IDE for Android development?",
+    "type": "trueFalse"
+  },
+  {
+    "id": 3,
+    "question": "What is the name of the Android build system that replaced Ant?",
+    "type": "input"
+  },
+  {
+    "id": 4,
+    "question": "What media types are natively supported in Android?",
+    "type": "multi",
+    "answers": ["webm", "aac", "mp3", "svg"]
+  }
+]
