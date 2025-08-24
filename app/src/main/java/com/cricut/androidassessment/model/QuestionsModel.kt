@@ -1,6 +1,8 @@
 package com.cricut.androidassessment.model
 
 import android.content.Context
+import android.util.Log
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.cricut.androidassessment.AssessmentApplication
 import com.cricut.androidassessment.model.data.QuestionInput
@@ -17,17 +19,61 @@ import org.json.JSONObject
 class QuestionsModel {
     val questions = Subscribable<ArrayList<Question<*>>>(arrayListOf())
 
-    private fun jsonArrayToStringArray(arr: JSONArray): ArrayList<String> {
-        val ret = ArrayList<String>()
-        for (i in 0 until arr.length()) {
-            val str = arr.getString(i)
-            ret.add(str)
+    private fun updateQuestions(list: List<Question<*>>, type: Class<out Question<*>>) {
+        val notInserted = list.toMutableList()
+        questions.value.replaceAll {value ->
+            if (value.javaClass != type) {
+                value
+            } else {
+                val item = list.firstOrNull { it.id == value.id }
+                if (item != null) {
+                    notInserted.remove(item)
+                    return@replaceAll item
+                } else {
+                    return@replaceAll value
+                }
+            }
         }
 
-        return ret
+        for (item in notInserted) {
+            questions.value.add(item)
+        }
     }
 
-    suspend fun remoteUpdate(context: Context) {
+    init {
+        val db = AssessmentApplication.instance.db
+        val activity = AssessmentApplication.instance.activity
+
+        //as it is now the questions have no inherent order
+        if (db != null && activity != null) {
+            //observe changes to the database and update our local list
+            db.questionTrueFalseDao().observeAll().observe(activity as LifecycleOwner) { list ->
+                Log.d("QuestionsModel", "Observed true/false list change")
+                updateQuestions(list, QuestionTrueFalse::class.java)
+                questions.notify()
+            }
+
+            db.questionInputDao().observeAll().observe(activity as LifecycleOwner) { list ->
+                Log.d("QuestionsModel", "Observed input list change")
+                updateQuestions(list, QuestionInput::class.java)
+                questions.notify()
+            }
+
+            db.questionSingleDao().observeAll().observe(activity as LifecycleOwner) { list ->
+                Log.d("QuestionsModel", "Observed single choice list change")
+                updateQuestions(list, QuestionSingle::class.java)
+                questions.notify()
+            }
+
+            db.questionMultipleDao().observeAll().observe(activity as LifecycleOwner) { list ->
+                Log.d("QuestionsModel", "Observed multiple choice list change")
+                updateQuestions(list, QuestionMultiple::class.java)
+                questions.notify()
+            }
+        }
+    }
+
+    suspend fun remoteUpdate(context: Context):Boolean {
         //simulate loading data from a web server
         Thread.sleep(100);
         val str = context.assets.open("sampleQuestions.json").bufferedReader()
@@ -38,52 +84,48 @@ class QuestionsModel {
         //update or insert all database entries
         this.questions.value.clear()
         for (question in newQuestions) {
-            updateItem(question)
+            insertItem(question)
         }
 
-        //reload local data
-        load()
+        return true
+    }
+
+    private fun insertItem(question: Question<*>) {
+        val db = AssessmentApplication.instance.db ?: return
+        when (question) {
+            is QuestionTrueFalse -> db.questionTrueFalseDao().insert(question)
+            is QuestionInput -> db.questionInputDao().insert(question)
+            is QuestionSingle -> db.questionSingleDao().insert(question)
+            is QuestionMultiple -> db.questionMultipleDao().insert(question)
+        }
     }
 
     private fun updateItem(question: Question<*>) {
         val db = AssessmentApplication.instance.db ?: return
         when (question) {
-            is QuestionTrueFalse -> db.questionTrueFalseDao().upsert(question)
-            is QuestionInput -> db.questionInputDao().upsert(question)
-            is QuestionSingle -> db.questionSingleDao().upsert(question)
-            is QuestionMultiple -> db.questionMultipleDao().upsert(question)
+            is QuestionTrueFalse -> db.questionTrueFalseDao().update(question)
+            is QuestionInput -> db.questionInputDao().update(question)
+            is QuestionSingle -> db.questionSingleDao().update(question)
+            is QuestionMultiple -> db.questionMultipleDao().update(question)
         }
-    }
-
-    fun load() {
-        this.questions.value.clear()
-
-        val db = AssessmentApplication.instance.db ?: return
-
-        val entitiestf = db.questionTrueFalseDao().getAll()
-        this.questions.value.addAll(entitiestf)
-        val entitiesi = db.questionInputDao().getAll()
-        this.questions.value.addAll(entitiesi)
-        val entitiess = db.questionSingleDao().getAll()
-        this.questions.value.addAll(entitiess)
-        val entitiesm = db.questionMultipleDao().getAll()
-        this.questions.value.addAll(entitiesm)
-
-        this.questions.notify()
     }
 
     fun commitChanges(question: Question<*>) {
-        val idx = questions.value.indexOfFirst { value -> value.id == question.id && question.javaClass == value.javaClass }
-        if (idx > -1) {
-            questions.value[idx] = question
-            questions.notify()
-        }
-
         AssessmentApplication.instance.activity?.lifecycleScope?.launch {
             withContext(Dispatchers.IO) {
                 updateItem(question)
             }
         }
+    }
+
+    private fun jsonArrayToStringArray(arr: JSONArray): ArrayList<String> {
+        val ret = ArrayList<String>()
+        for (i in 0 until arr.length()) {
+            val str = arr.getString(i)
+            ret.add(str)
+        }
+
+        return ret
     }
 
     fun parseData(json: String):List<Question<*>> {

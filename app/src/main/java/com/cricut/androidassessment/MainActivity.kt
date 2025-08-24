@@ -38,11 +38,16 @@ class MainActivity : ComponentActivity() {
         //my json seed data isn't updated with the rest of the data so we'll ignore the "remote update"
         //if the database already has data in it
         lifecycleScope.launch(Dispatchers.IO) {
-            questionsModel.load()
-
-            if (questionsModel.questions.value.isEmpty()) {
-                questionsModel.remoteUpdate(AssessmentApplication.instance)
-                questionsModel.load()
+            Preferences.firstLoad.collect { firstLoad ->
+                if (firstLoad) {
+                    Log.d("MainActivity", "First load - updating remote data")
+                    val success = questionsModel.remoteUpdate(AssessmentApplication.instance)
+                    if (success) {
+                        Preferences.setFirstLoad(false)
+                    } else {
+                        Log.e("MainActivity", "Remote update failed")
+                    }
+                }
             }
         }
 

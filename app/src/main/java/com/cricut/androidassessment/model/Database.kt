@@ -9,9 +9,13 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Upsert
 import com.cricut.androidassessment.model.data.QuestionInput
+import com.cricut.androidassessment.model.data.QuestionInputDao
 import com.cricut.androidassessment.model.data.QuestionMultiple
+import com.cricut.androidassessment.model.data.QuestionMultipleDao
 import com.cricut.androidassessment.model.data.QuestionSingle
+import com.cricut.androidassessment.model.data.QuestionSingleDao
 import com.cricut.androidassessment.model.data.QuestionTrueFalse
+import com.cricut.androidassessment.model.data.QuestionTrueFalseDao
 
 interface Question<T> {
     val id: Int
@@ -19,54 +23,6 @@ interface Question<T> {
     var answer: T
     fun hasAnswer(): Boolean
     fun copy():Question<T>
-}
-
-@Dao
-interface QuestionTrueFalseDao {
-    @Query("SELECT * FROM QuestionTrueFalse ORDER BY id")
-    fun getAll(): List<QuestionTrueFalse>
-
-    @Query("SELECT * FROM QuestionTrueFalse WHERE id = :id")
-    fun get(id: Long): QuestionTrueFalse
-
-    @Upsert
-    fun upsert(question: QuestionTrueFalse):Long
-}
-
-@Dao
-interface QuestionInputDao {
-    @Query("SELECT * FROM QuestionInput ORDER BY id")
-    fun getAll(): List<QuestionInput>
-
-    @Query("SELECT * FROM QuestionInput WHERE id = :id")
-    fun get(id: Long): QuestionInput
-
-    @Upsert
-    fun upsert(question: QuestionInput):Long
-}
-
-@Dao
-interface QuestionSingleDao {
-    @Query("SELECT * FROM QuestionSingle ORDER BY id")
-    fun getAll(): List<QuestionSingle>
-
-    @Query("SELECT * FROM QuestionSingle WHERE id = :id")
-    fun get(id: Long): QuestionSingle
-
-    @Upsert
-    fun upsert(question: QuestionSingle):Long
-}
-
-@Dao
-interface QuestionMultipleDao {
-    @Query("SELECT * FROM QuestionMultiple")
-    fun getAll(): List<QuestionMultiple>
-
-    @Query("SELECT * FROM QuestionMultiple WHERE id = :id")
-    fun get(id: Long): QuestionMultiple
-
-    @Upsert
-    fun upsert(question: QuestionMultiple):Long
 }
 
 class Converters {

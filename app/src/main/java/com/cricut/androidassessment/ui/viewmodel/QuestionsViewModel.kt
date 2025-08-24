@@ -18,17 +18,33 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class QuestionsViewModel(val questionsModel: QuestionsModel, val questionCount: Int): ViewModel() {
+    //keep a local filtered list of the questions to show
     private val questions:MutableList<Question<*>> = mutableListOf()
 
     init {
         questionsModel.questions.subscribe { from, to ->
-            prepare()
+            filterQuestions()
+            updateState()
         }
 
         viewModelScope.launch {
             Preferences.questionIndex.collect { value ->
                 index = value
+                updateState()
             }
+        }
+    }
+
+    private fun updateState() {
+        val index = index
+        if (index == null || index >= questions.size) {
+            question.value = null
+            nextEnabled.value = false
+            previousVisible.value = false
+        } else {
+            question.value = questions[index]
+            nextEnabled.value = question.value?.hasAnswer() ?: false
+            previousVisible.value = index > 0
         }
     }
 
@@ -37,16 +53,6 @@ class QuestionsViewModel(val questionsModel: QuestionsModel, val questionCount: 
             return field
         }
         set(value) {
-            if (value == null || value >= questions.size) {
-                question.value = null
-                nextEnabled.value = false
-                previousVisible.value = false
-            } else {
-                question.value = questions[value]
-                nextEnabled.value = question.value?.hasAnswer() ?: false
-                previousVisible.value = value > 0
-            }
-
             field = value
             viewModelScope.launch {
                 Preferences.setQuestionIndex(value ?: 0)
@@ -58,7 +64,7 @@ class QuestionsViewModel(val questionsModel: QuestionsModel, val questionCount: 
     val nextEnabled = MutableStateFlow(false)
     val previousVisible = MutableStateFlow(false)
 
-    fun prepare() {
+    fun filterQuestions() {
         val max = questionCount.coerceAtMost(questionsModel.questions.value.size)
         val filtered = questionsModel.questions.value.subList(0, max)
         questions.clear()
