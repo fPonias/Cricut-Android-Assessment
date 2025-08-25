@@ -41,9 +41,6 @@ fun AssessmentScreen(
     modifier: Modifier = Modifier,
     viewModel: QuestionsViewModel = viewModel()
 ) {
-    val deselectedColor = Color.Gray
-    val selectedColor = Color.Blue
-
     val question by viewModel.question.collectAsState()
     val nextEnabled by viewModel.nextEnabled.collectAsState()
     val previousVisible by viewModel.previousVisible.collectAsState()
@@ -124,7 +121,11 @@ fun AssessmentScreen(
     }
 
     @Composable
-    fun renderAnswers() {
+    fun renderQuestion() {
+        Box {
+            Text(modifier = modifier.align(Alignment.Center), text = question?.question ?: "")
+        }
+
         when (question) {
             is QuestionTrueFalse -> {
                 renderTrueFalse(question as QuestionTrueFalse)
@@ -141,21 +142,14 @@ fun AssessmentScreen(
         }
     }
 
-    val nextColor = if (nextEnabled) {
-        SelectedButton
-    } else {
-        DeselectedButton
-    }
-
-    Column(modifier = modifier.fillMaxSize().padding(20.dp)) {
-        Column(modifier.fillMaxSize().weight(weight = 1f, fill = true),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box {
-                Text(modifier = modifier.align(Alignment.Center), text = question?.question ?: "")
-            }
-            renderAnswers()
+    @Composable
+    fun renderButtons() {
+        val nextColor = if (nextEnabled) {
+            SelectedButton
+        } else {
+            DeselectedButton
         }
+
         Row(
             modifier = modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -177,6 +171,15 @@ fun AssessmentScreen(
                 Text(stringResource( R.string.question_next))
             }
         }
+    }
+
+    Column(modifier = modifier.fillMaxSize().padding(20.dp)) {
+        Column(modifier.fillMaxSize().weight(weight = 1f, fill = true),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            renderQuestion()
+        }
+        renderButtons()
     }
 }
 
